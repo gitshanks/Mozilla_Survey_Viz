@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+
+<link href="https://fonts.googleapis.com/css?family=Roboto:100,900i&display=swap" rel="stylesheet">
+
+<title>Technically savvy, but a little wary</title>
+
+<style>
+  body {
+    font-family: 'Roboto', sans-serif;
+  }
+
+  p {
+    padding: {top: 20, right: 0, bottom: 20, left: 0};
+    margin-left: 100px;
+    margin-right: 100px;
+  }
+
+  ul {
+    margin-left: 120px;
+  }
+
+  h1 {
+    margin-top: 40px;
+    margin-bottom: 0px;
+    font-weight: normal;
+    text-align: center;
+  }
+
+  h2 {
+    margin-top: 0px;
+    text-align: center;
+  }
+
+</style>
+
+<body>
+  <!--Import the D3 Library (version 4 in this case)-->
+  <script src="https://d3js.org/d3.v4.min.js"></script>
+  <script src="//d3js.org/d3-scale-chromatic.v0.3.min.js"></script>
+
+  <h1><em>Technically savvy, but a little wary...</em></h1>
+  <h2>visualizing types of users and the devices they own.</h2>
+  <p>
+    A <a href="https://www.surveygizmo.com/s3/3643927/091fb5d9e0e1">recent survey by Mozilla</a> asked respondents: "how
+    connected are you?". They were asked to select their level of experience with technology: <em>Luddite/Very little experience</em>,
+    <em>Average User</em>, <em>Technically Savvy</em> and <em>Ultra Nerd</em>. The respondents were also asked which of the following
+    options best matched their feelings about a future in which so much of their world is connected to the internet:
+    <ul>
+      <li> <em>Super excited!</em> I can’t wait for everything to be connected. My life will be so much better.
+      <li> <em>Cautiously optimistic.</em> I’m hopeful we’re building a better world by becoming more connected in everything we do.
+      <li> <em>On the fence.</em> I’m not sure about all this. I think I’ll wait and see.
+      <li> <em>A little wary.</em> All this being connected to the internet in every part of our lives makes me a little nervous. What’s going to happen to our privacy?
+      <li> <em>Scared as hell.</em> The future where everything is connected has me scared senseless. We’re all doomed!
+    </ul>
+  </p>
+  <p>
+    The visualization below shows the groups that can be created by combining those two categories of respondents. For example, the group of Ultra Nerds
+    that are "Scared as hell" or the group of Average Users, who are feeling "Super excited!". The color of the square represents
+    the number of people in a group: the darker, the bigger the group. Moving your mouse over any of the squares, will show the exact number of respondents in the group.
+  </p>
+  <center>
+    <div id="visualization_1"></div>
+  </center>
+  <p>
+    The respondents also filled out which internet connected devices they currently own. The bars in the barplot below show
+    the total number of respondents owning a particular device. However, if you click on a group of respondents in the first
+    visualization (i.e., any of the squares), you will be able to see which percentage of the respondents in that group owns the device.
+    Click on any of the parts of the bars that is not selected to go back to the total.
+  </p>
+  <center>
+    <div id="visualization_2"></div>
+  </center>
+
+<script>
+  // VISUALIZATION 1: HEATMAP
+  // Set up the bounds of the visualization
+  var margin = { top: 20, right: 40, bottom: 60, left: 130 };
+  var width = 980 - margin.right - margin.left;
+  var height = 550 - margin.top - margin.bottom;
+
+  // Set up the first SVG that gives us a canvas to draw on
+  var svg_heatmap = d3.select("#visualization_1").append("svg")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+    .append("g")
+    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+  var userLevel = ["Ultra Nerd",
+    "Technically Savvy",
+    "Average User",
+    "Luddite"]
+
+  var userAttitude = ["Scared as hell",
+    "A little wary",
+    "On the fence",
+    "Cautiously optimistic",
+    "Super excited!"]
+
+  // Build X scales and axis:
+  var x = d3.scaleBand()
+    .range([0, width])
+    .domain(userAttitude)
+    .padding(0.01);
+
+  svg_heatmap.append("g")
+    .attr("transform", "translate(0," + height + ")")
+    .call(d3.axisBottom(x))
+    .style("font-size", 15)
+
+  // Build Y scales and axis:
+  var y = d3.scaleBand()
+    .range([height, 0])
+    .domain(userLevel)
+    .padding(0.01);
+  svg_heatmap.append("g")
+    .style("font-size", 15)
+    .call(d3.axisLeft(y));
+
+  // Read the data
+  d3.csv("preprocessed_data/user_categories.csv", function (data) {
+    // Loop through the data and convert the numeric columns to numbers
+    data.forEach(function (d) {
+      d.counts = +d.counts;
+    })
+
+    // create a tooltip
+    var tooltip_heatmap = d3.select("#visualization_1")
+      .append("div")
+      .style("opacity", 0)
+      .attr("class", "tooltip")
+      .attr("id", "heatmap_tooltip")
+      .style("background-color", "white")
+      .style("border", "solid")
+      .style("border-width", "1px")
+      .style("border-radius", "5px")
+      .style("padding", "5px")
+      .style("position", "absolute")
+
+    // Three function that change the tooltip when user hover / move / leave a cell
+    var mouseover = function (d) {
+      tooltip_heatmap.style("opacity", 1)
+      d3.select(this)
+        .style("stroke", "black")
+        .style("opacity", 1)
+    }
+    var mousemove = function (d) {
+      tooltip_heatmap
+        .html(d.counts + " respondents")
+        .style("left", (d3.mouse(this)[0] + 150) + "px")
+        .style("top", (d3.mouse(this)[1] + 350) + "px")
+    }
+    var mouseleave = function (d) {
+      tooltip_heatmap.style("opacity", 0)
+      d3.select(this)
+        .style("stroke", "none")
+        .style("opacity", 0.8)
+    }
+
+    var max_counts = d3.max(data, function (d) { return d.counts; });
+
+    // Build color scale
+    var myColor = d3.scaleSequential()
+      .interpolator(d3.interpolate("white", "#2a5674"))
+      .domain([1, max_counts]);
+
+    svg_heatmap.selectAll()
+      .data(data, function (d) { return d.attitude + ':' + d.user_level; })
+      .enter()
+      .append("rect")
+      .attr("x", function (d) { return x(d.attitude) })
+      .attr("y", function (d) { return y(d.user_level) })
+      .attr("rx", 4)
+      .attr("ry", 4)
+      .attr("width", x.bandwidth())
+      .attr("height", y.bandwidth())
+      .style("fill", function (d) { return myColor(d.counts) })
+      .attr("class", function (d) { return createClassName(d.user_level, d.attitude) })
+      .style("stroke-width", 4)
+      .style("stroke", "none")
+      .style("opacity", 0.8)
+      .on("mouseover", mouseover)
+      .on("mousemove", mousemove)
+      .on("mouseleave", mouseleave)
+      .on("click", click);
+
+  heatmap_data = data
+  })
+
+  // VISUALIZATION 2: BARPLOT
+  // Set up the bounds of the visualization
+  var margin = { top: 20, right: 20, bottom: 200, left: 100 };
+  var width = 920 - margin.right - margin.left;
+  var height = 600 - margin.top - margin.bottom;
+
+  // Set up the second SVG that gives us a canvas to draw on
+  var svg_barplot = d3.select("#visualization_2").append("svg")
+    .attr("width", width + margin.left + margin.right)
+    .attr("height", height + margin.top + margin.bottom)
+    .append("g")
+    .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+  // Read the data
+  d3.csv("preprocessed_data/devices_per_user_category.csv", addTotals, function (data) {
+    // Loop through the data and convert the numeric columns to numbers
+    var numeric_columns = JSON.parse(JSON.stringify(data.columns));
+    numeric_columns.shift()
+
+    data.forEach(function (d) {
+      numeric_columns.forEach(function (c) {
+        d[c] = +d[c];
+      })
+    })
+
+    // List of subgroups = header of the csv files = soil condition here
+    var subgroups = data.columns.slice(1);
+
+    // List of groups = species here = value of the first column called group -> I show them on the X axis
+    var groups = d3.map(data, function (d) { return (d.device) }).keys();
+
+    // Add X axis
+    var x = d3.scaleBand()
+      .domain(groups)
+      .range([0, width])
+      .padding([0.2])
+    svg_barplot.append("g")
+      .attr("transform", "translate(0," + height + ")")
+      .call(d3.axisBottom(x).tickSizeOuter(0))
+      .selectAll("text")
+      .attr("transform", "translate(-10,0)rotate(-45)")
+      .style("text-anchor", "end")
+      .style("font-size", 15);
+
+    // Add Y axis
+    var y = d3.scaleLinear()
+      .range([height, 0]);
+
+    var tooltip_barplot = d3.select("#visualization_2")
+      .append("div")
+      .style("opacity", 0)
+      .attr("class", "tooltip")
+      .style("background-color", "white")
+      .style("border", "solid")
+      .style("border-width", "1px")
+      .style("border-radius", "5px")
+      .style("padding", "5px")
+      .style("position", "absolute")
+
+    // Three function that change the tooltip when user hover / move / leave a cell
+    var mouseover_bar = function (d) {
+      if (typeof selectedClass != 'undefined') {
+        var subgroupName = d3.select(this.parentNode).datum().key;
+        if (fixClassName(subgroupName) == selectedClass) {
+          var subgroupValue = d.data[subgroupName];
+          var subgroupUserLevel = subgroupName.split(" x ")[0];
+          var subgroupUserAttitude = subgroupName.split(" x ")[1];
+          var percentage = Math.round((subgroupValue/heatmap_tooltip_value) * 100);
+          tooltip_barplot
+            .html(percentage + '% of "' + subgroupUserLevel + '" feeling "' + subgroupUserAttitude + '" own a ' + d.data.device)
+            .style("opacity", 1)
+        }
+      }
+    }
+    var mousemove_bar = function (d) {
+      tooltip_barplot
+        .style("left", (d3.mouse(this)[0] + 50) + "px")
+        .style("top", (d3.mouse(this)[1] + 1000) + "px")
+    }
+    var mouseleave_bar = function (d) {
+      tooltip_barplot
+        .style("opacity", 0)
+    }
+
+    var color = d3.scaleOrdinal()
+        .domain(subgroups)
+        .range(d3.schemeCategory20)
+
+    //stack the data? --> stack per subgroup
+    var stackedData = d3.stack()
+      .keys(subgroups)
+      (data)
+
+    // Set the domain for the y axis and append axis
+    y.domain([0, d3.max(data, function (d) { return d.total; })]).nice();
+    svg_barplot.append("g")
+      .style("font-size", 15)
+      .call(d3.axisLeft(y));
+
+    // Show the bars
+    svg_barplot.append("g")
+      .selectAll("g")
+      // Enter in the stack data = loop key per key = group per group
+      .data(stackedData)
+      .enter().append("g")
+      // // Option 1: Only one color for all the bars
+      // .attr("fill", "#CC6677")
+      // Option 2: A different color for each layer of the stacks.
+      .attr("fill", function (d) { return color(d.key); })
+      .attr("class", function (d) { return "bar-rect " + fixClassName(d.key) })
+      .selectAll("rect")
+      // enter a second time = loop subgroup per subgroup to add all rectangles
+      .data(function (d) { return d; })
+      .enter().append("rect")
+        .attr("x", function (d) { return x(d.data.device); })
+        .attr("y", function (d) { return y(d[1]); })
+        .attr("height", function (d) { return y(d[0]) - y(d[1]); })
+        .attr("width", x.bandwidth())
+        .style("stroke", "white")
+      .on("mouseover", mouseover_bar)
+      .on("mousemove", mousemove_bar)
+      .on("mouseleave", mouseleave_bar)
+      .on("click", barplotClick);
+  })
+
+function addTotals(d, i, columns) {
+  for (i = 1, t = 0; i < columns.length; ++i) {
+    t += d[columns[i]] = +d[columns[i]];
+  }
+  d.total = t;
+  return d;
+}
+
+// With click, set a class that will be used in the second visualization.
+function click() {
+  selectedClass = this.className.baseVal;
+  heatmap_tooltip_value = parseInt(d3.select("#heatmap_tooltip").text().replace(" respondents", ""));
+
+  // Reduce opacity of all rect to 0.1
+  d3.selectAll(".bar-rect").style("opacity", 0.1)
+  // Highlight all rects of this subgroup with opacity 0.8. It is possible to select them since they have a specific class = their name.
+  d3.selectAll("." + selectedClass)
+    .style("opacity", 1)
+}
+
+// With a click on the barplot, restore barplot.
+function barplotClick() {
+  if (typeof selectedClass != 'undefined') {
+    if (selectedClass != this.className.baseVal) {
+      selectedClass = undefined;
+      d3.selectAll(".bar-rect").style("opacity", 1);
+    }
+  }
+}
+
+// Function for creating heatmap class names
+function createClassName(level, attitude) {
+  var class_name = level + "_" + attitude;
+  return class_name.replace(/ /g, "_").replace("!", "");
+}
+
+// Function to remove spaces from class names
+function fixClassName(className) {
+  return className.replace(" x", "").replace(/ /g, "_").replace("!", "");
+}
+
+</script>
